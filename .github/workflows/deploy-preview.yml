@@ -1,0 +1,112 @@
+name: Deploy preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    env:
+      BUNNYNET_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+      PREVIEW_ZONE: pogo-buddy-excite-pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bunny CLI
+        run: |
+          npm install --global @bunny.net/cli@0.5.1
+          bunny --version
+
+      - name: Verify Bunny auth
+        run: bunny whoami --output json > /dev/null
+
+      - name: Find or create storage zone
+        id: storage
+        env:
+          ZONE_NAME: ${{ env.PREVIEW_ZONE }}
+        run: |
+          ALL_ZONES=$(bunny api GET '/storagezone?page=1&perPage=1000' --output json)
+          EXISTING=$(echo "$ALL_ZONES" | jq -c --arg name "$ZONE_NAME" '(.Items // [])[] | select(.Name == $name)' | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            SZ_ID=$(echo "$EXISTING" | jq -r '.Id')
+            SZ_PASSWORD=$(echo "$EXISTING" | jq -r '.Password')
+            SZ_HOST=$(echo "$EXISTING" | jq -r '.StorageHostname')
+          else
+            RESPONSE=$(bunny api POST /storagezone \
+              --body "{\"Name\":\"$ZONE_NAME\",\"Region\":\"SE\"}" \
+              --output json)
+            SZ_ID=$(echo "$RESPONSE" | jq -r '.Id')
+            SZ_PASSWORD=$(echo "$RESPONSE" | jq -r '.Password')
+            SZ_HOST=$(echo "$RESPONSE" | jq -r '.StorageHostname')
+            sleep 5
+          fi
+
+          echo "::add-mask::$SZ_PASSWORD"
+          echo "id=$SZ_ID" >> $GITHUB_OUTPUT
+          echo "password=$SZ_PASSWORD" >> $GITHUB_OUTPUT
+          echo "host=$SZ_HOST" >> $GITHUB_OUTPUT
+
+      - name: Upload files
+        env:
+          SZ_PASSWORD: ${{ steps.storage.outputs.password }}
+          SZ_HOST: ${{ steps.storage.outputs.host }}
+          ZONE_NAME: ${{ env.PREVIEW_ZONE }}
+        run: |
+          find public -type f | while read -r file; do
+            remote="${file#public/}"
+            echo "Uploading $file -> /$ZONE_NAME/$remote"
+            curl --fail --silent --show-error \
+              --request PUT \
+              --header "AccessKey: $SZ_PASSWORD" \
+              --data-binary "@$file" \
+              "https://$SZ_HOST/$ZONE_NAME/$remote"
+          done
+
+      - name: Find or create pull zone
+        id: pullzone
+        env:
+          SZ_ID: ${{ steps.storage.outputs.id }}
+          ZONE_NAME: ${{ env.PREVIEW_ZONE }}
+        run: |
+          ALL_PZ=$(bunny api GET '/pullzone?page=1&perPage=1000' --output json)
+          EXISTING_ID=$(echo "$ALL_PZ" | jq -r --arg name "$ZONE_NAME" '(.Items // [])[] | select(.Name == $name) | .Id' | head -1)
+
+          if [ -z "$EXISTING_ID" ] || [ "$EXISTING_ID" = "null" ]; then
+            RESPONSE=$(bunny api POST /pullzone \
+              --body "{\"Name\":\"$ZONE_NAME\",\"Type\":0,\"StorageZoneId\":$SZ_ID}" \
+              --output json)
+            EXISTING_ID=$(echo "$RESPONSE" | jq -r '.Id')
+          fi
+
+          echo "id=$EXISTING_ID" >> $GITHUB_OUTPUT
+
+      - name: Purge pull zone cache
+        run: bunny api POST /pullzone/${{ steps.pullzone.outputs.id }}/purgeCache
+
+      - name: Post or update preview comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREVIEW_URL="https://${{ env.PREVIEW_ZONE }}.b-cdn.net"
+          BODY=$(cat <<EOF
+          <!-- bunny-preview -->
+          **Preview:** $PREVIEW_URL
+
+          Commit: \`${{ github.sha }}\`
+          EOF
+          )
+
+          COMMENT_ID=$(gh api \
+            "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq '.[] | select(.body | contains("<!-- bunny-preview -->")) | .id' | head -1)
+
+          if [ -n "$COMMENT_ID" ]; then
+            gh api "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" \
+              -X PATCH -f body="$BODY"
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+          fi
