@@ -3,13 +3,14 @@
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const INTERACTION_TYPES = {
-  feed:     { label: 'Feed',               ep: 2, cooldownMin: 30 },
-  play:     { label: 'Play',               ep: 2, cooldownMin: 30 },
-  snapshot: { label: 'Snapshot',           ep: 2, cooldownMin: 30 },
-  battle:   { label: 'Battle',             ep: 2, cooldownMin: 30 },
-  walk:     { label: 'Walk heart',         ep: 2, cooldownMin: 30 },
-  newplace: { label: 'New place',          ep: 2, cooldownMin: 30 },
-  gift:     { label: 'Open gift/souvenir', ep: 2, cooldownMin: 30 },
+  feed:          { label: 'Feed',                              ep: 1, cooldownMin: 30 },
+  play:          { label: 'Play',                              ep: 1, cooldownMin: 30 },
+  battle:        { label: 'Battle',                           ep: 1, cooldownMin: 30 },
+  walk:          { label: 'Walk 2 km',                        ep: 3, cooldownMin: 0  },
+  snapshot:      { label: 'Take a snapshot',                  ep: 3, cooldownMin: 30 },
+  gift:          { label: 'Open a souvenir/present',          ep: 3, cooldownMin: 30 },
+  newplace:      { label: 'Visit a new location',             ep: 1, cooldownMin: 30 },
+  buddylocation: { label: 'Visit a location found by buddy',  ep: 1, cooldownMin: 30 },
 };
 
 const RULES = {
