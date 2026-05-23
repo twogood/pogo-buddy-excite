@@ -57,25 +57,12 @@ jobs:
           SZ_PASSWORD: ${{ steps.storage.outputs.password }}
           SZ_HOST: ${{ steps.storage.outputs.host }}
         run: |
-          get_content_type() {
-            case "$1" in
-              *.html)        echo "text/html; charset=utf-8" ;;
-              *.js)          echo "text/javascript; charset=utf-8" ;;
-              *.css)         echo "text/css; charset=utf-8" ;;
-              *.svg)         echo "image/svg+xml" ;;
-              *.webmanifest) echo "application/manifest+json" ;;
-              *)             echo "application/octet-stream" ;;
-            esac
-          }
-
           find public -type f | while read -r file; do
             remote="${file#public/}"
-            content_type=$(get_content_type "$file")
-            echo "Uploading $file -> /pogo-buddy-excite/$remote ($content_type)"
+            echo "Uploading $file -> /pogo-buddy-excite/$remote"
             curl --fail --silent --show-error \
               --request PUT \
               --header "AccessKey: $SZ_PASSWORD" \
-              --header "Content-Type: $content_type" \
               --data-binary "@$file" \
               "https://$SZ_HOST/pogo-buddy-excite/$remote"
           done
@@ -174,25 +161,12 @@ jobs:
           SZ_HOST: ${{ steps.storage.outputs.host }}
           ZONE_NAME: ${{ env.PREVIEW_ZONE }}
         run: |
-          get_content_type() {
-            case "$1" in
-              *.html)        echo "text/html; charset=utf-8" ;;
-              *.js)          echo "text/javascript; charset=utf-8" ;;
-              *.css)         echo "text/css; charset=utf-8" ;;
-              *.svg)         echo "image/svg+xml" ;;
-              *.webmanifest) echo "application/manifest+json" ;;
-              *)             echo "application/octet-stream" ;;
-            esac
-          }
-
           find public -type f | while read -r file; do
             remote="${file#public/}"
-            content_type=$(get_content_type "$file")
-            echo "Uploading $file -> /$ZONE_NAME/$remote ($content_type)"
+            echo "Uploading $file -> /$ZONE_NAME/$remote"
             curl --fail --silent --show-error \
               --request PUT \
               --header "AccessKey: $SZ_PASSWORD" \
-              --header "Content-Type: $content_type" \
               --data-binary "@$file" \
               "https://$SZ_HOST/$ZONE_NAME/$remote"
           done
