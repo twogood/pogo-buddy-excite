@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#e94560" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#e94560" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Excite">
+  <meta name="description" content="Track Pokémon GO buddy excitement sessions without Poffins.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/assets/icons/icon.svg">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <title>Buddy Excite Tracker</title>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Status bar -->
+    <div class="status-bar" id="status-bar">
+      <span class="mode-badge" id="mode-badge">Building</span>
+      <span class="session-time" id="session-time">Started --:--</span>
+    </div>
+
+    <!-- Progress toward excited -->
+    <div class="card progress-section">
+      <div class="progress-fraction calm" id="progress-fraction">0 / 32</div>
+      <div class="progress-label" id="progress-label">Calm</div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill calm" id="progress-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-estimate-note">Estimated based on logged interactions.</div>
+    </div>
+
+    <!-- Next recommended action -->
+    <div class="card recommendation" id="recommendation">
+      Start your first interaction!
+    </div>
+
+    <!-- Interaction buttons -->
+    <div class="buttons-grid">
+      <button class="interaction-btn" id="btn-feed">
+        <span class="btn-label">Feed</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+      <button class="interaction-btn" id="btn-play">
+        <span class="btn-label">Play</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+      <button class="interaction-btn" id="btn-snapshot">
+        <span class="btn-label">Snapshot</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+      <button class="interaction-btn" id="btn-battle">
+        <span class="btn-label">Battle</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+      <button class="interaction-btn" id="btn-walk">
+        <span class="btn-label">Walk heart</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+      <button class="interaction-btn" id="btn-newplace">
+        <span class="btn-label">New place</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+      <button class="interaction-btn" id="btn-gift" style="grid-column: 1 / -1;">
+        <span class="btn-label">Open gift / souvenir</span>
+        <span class="btn-cooldown">Ready now</span>
+      </button>
+    </div>
+
+    <!-- Excited mode controls -->
+    <div class="excited-controls" id="excited-controls">
+      <button class="btn-confirm-excited" id="btn-confirm-excited">
+        Buddy is excited now
+      </button>
+      <button class="btn-end-excited" id="btn-end-excited" style="display:none">
+        End excited session
+      </button>
+    </div>
+
+    <!-- Maintenance status (shown in maintaining mode) -->
+    <div class="card maintenance-status" id="maintenance-status">
+      <div class="maintenance-header">Excited mode</div>
+      <div class="maintenance-since" id="maintenance-since">Excited since --:--</div>
+      <div class="risk-warning" id="risk-warning">
+        Risk of losing excited state soon — interact now!
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="card notifications-bar" id="notifications-bar">
+      <div class="notifications-row">
+        <button class="btn-notifications" id="btn-notifications">Enable reminders</button>
+        <span class="notifications-status" id="notifications-status"></span>
+      </div>
+      <div class="notifications-note">
+        Reminders work best while the page or PWA remains open.
+      </div>
+    </div>
+
+    <!-- Interaction history -->
+    <div class="card history-section">
+      <h2>History</h2>
+      <p class="history-empty" id="history-empty">No interactions yet this session.</p>
+      <ul class="history-list" id="history-list"></ul>
+    </div>
+
+    <!-- Session controls -->
+    <div class="session-controls">
+      <button class="btn-new-session" id="btn-new-session">Start new buddy session</button>
+      <span class="session-note">Clears all interactions and resets progress.</span>
+    </div>
+
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js');
+    }
+  </script>
+</body>
+</html>
