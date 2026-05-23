@@ -125,6 +125,8 @@ jobs:
   preview:
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     env:
       PREVIEW_ZONE: pogo-buddy-excite-pr-${{ github.event.pull_request.number }}
     steps:
