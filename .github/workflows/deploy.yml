@@ -98,6 +98,25 @@ jobs:
 
           echo "id=$EXISTING_ID" >> $GITHUB_OUTPUT
 
+      - name: Add custom hostname to pull zone
+        env:
+          BUNNYNET_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+        run: |
+          PZ_ID="${{ steps.pullzone.outputs.id }}"
+          HOSTNAME="excite.2good.nu"
+
+          PZ_DATA=$(bunny api GET /pullzone/$PZ_ID --output json)
+          EXISTING=$(echo "$PZ_DATA" | jq -r '.Hostnames[]?.Value // empty' | grep -Fx "$HOSTNAME" || true)
+
+          if [ -z "$EXISTING" ]; then
+            bunny api POST /pullzone/$PZ_ID/addHostname \
+              --body "{\"Hostname\":\"$HOSTNAME\"}" \
+              --output json > /dev/null
+            echo "Added hostname $HOSTNAME"
+          else
+            echo "Hostname $HOSTNAME already configured"
+          fi
+
       - name: Purge pull zone cache
         env:
           BUNNYNET_API_KEY: ${{ secrets.BUNNY_API_KEY }}
