@@ -193,7 +193,7 @@ body {
 .mood-sprite {
   width: 80px;
   height: 90px;
-  background-image: url('../icons/buddy-moods.webp');
+  background-image: url('./icons/buddy-moods.webp');
   background-size: 500% auto;
   background-repeat: no-repeat;
   margin: 8px auto;
