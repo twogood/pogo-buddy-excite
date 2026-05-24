@@ -1,0 +1,46 @@
+name: Cleanup preview
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      BUNNYNET_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+      PREVIEW_ZONE: pogo-buddy-excite-pr-${{ github.event.pull_request.number }}
+    steps:
+      - name: Install Bunny CLI
+        run: npm install --global @bunny.net/cli@0.5.1
+
+      - name: Verify Bunny auth
+        run: bunny whoami --output json > /dev/null
+
+      - name: Delete pull zone
+        env:
+          ZONE_NAME: ${{ env.PREVIEW_ZONE }}
+        run: |
+          ALL_PZ=$(bunny api GET '/pullzone?page=1&perPage=1000' --output json)
+          PZ_ID=$(echo "$ALL_PZ" | jq -r --arg name "$ZONE_NAME" '(.Items // [])[] | select(.Name == $name) | .Id' | head -1)
+
+          if [ -n "$PZ_ID" ] && [ "$PZ_ID" != "null" ]; then
+            bunny api DELETE /pullzone/$PZ_ID
+            echo "Deleted pull zone $PZ_ID ($ZONE_NAME)"
+          else
+            echo "No pull zone found for $ZONE_NAME, skipping"
+          fi
+
+      - name: Delete storage zone
+        env:
+          ZONE_NAME: ${{ env.PREVIEW_ZONE }}
+        run: |
+          ALL_ZONES=$(bunny api GET '/storagezone?page=1&perPage=1000' --output json)
+          SZ_ID=$(echo "$ALL_ZONES" | jq -r --arg name "$ZONE_NAME" '(.Items // [])[] | select(.Name == $name) | .Id' | head -1)
+
+          if [ -n "$SZ_ID" ] && [ "$SZ_ID" != "null" ]; then
+            bunny api DELETE /storagezone/$SZ_ID
+            echo "Deleted storage zone $SZ_ID ($ZONE_NAME)"
+          else
+            echo "No storage zone found for $ZONE_NAME, skipping"
+          fi
