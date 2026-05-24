@@ -42,10 +42,10 @@ jobs:
             sleep 5
           fi
 
-          echo "::add-mask::$SZ_PASSWORD"
           echo "id=$SZ_ID" >> $GITHUB_OUTPUT
           echo "password=$SZ_PASSWORD" >> $GITHUB_OUTPUT
           echo "host=$SZ_HOST" >> $GITHUB_OUTPUT
+          echo "::add-mask::$SZ_PASSWORD"
 
       - name: Upload files
         env:
