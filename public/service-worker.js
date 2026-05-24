@@ -5,7 +5,7 @@ const ASSETS = [
   '/assets/app.js',
   '/assets/styles.css',
   '/assets/icons/icon.svg',
-  '/assets/icons/buddy-moods.webp',
+  '/assets/buddy-moods.webp',
   '/manifest.webmanifest',
 ];
 
