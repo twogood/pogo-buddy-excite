@@ -76,6 +76,7 @@ function recalculate(now) {
   const lastEPTimeByType = {};
   let totalEP = 0;
   let lastEPAt = null;
+  let lastActivityAt = null; // any interaction resets decay, even cooldown-blocked ones
 
   for (const interaction of sorted) {
     const cfg = INTERACTION_TYPES[interaction.type];
@@ -85,6 +86,8 @@ function recalculate(now) {
     const prevEPMs = lastEPTimeByType[interaction.type];
     const cooldownMs = cfg.cooldownMin * 60 * 1000;
     const onCooldown = prevEPMs !== undefined && createdMs - prevEPMs < cooldownMs;
+
+    lastActivityAt = createdMs;
 
     if (onCooldown) {
       interaction.counted = false;
@@ -98,9 +101,9 @@ function recalculate(now) {
     }
   }
 
-  // Apply EP decay based on time since last EP-granting interaction
-  if (lastEPAt !== null) {
-    const minutesSinceLast = (now - lastEPAt) / 60000;
+  // Decay resets on any activity, not just EP-granting ones
+  if (lastActivityAt !== null) {
+    const minutesSinceLast = (now - lastActivityAt) / 60000;
     const decayPeriods = Math.floor(minutesSinceLast / RULES.decayEveryMinutes);
     totalEP = Math.max(0, totalEP - decayPeriods * RULES.decayAmount);
   }
