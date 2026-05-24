@@ -11,6 +11,7 @@ const INTERACTION_TYPES = {
   gift:          { label: 'Open a souvenir/present',          ep: 3, cooldownMin: 30 },
   newplace:      { label: 'Visit a new location',             ep: 1, cooldownMin: 30 },
   buddylocation: { label: 'Visit a location found by buddy',  ep: 1, cooldownMin: 30 },
+  route:         { label: 'Follow a route',                   ep: 4, cooldownMin: 0  },
 };
 
 const RULES = {
