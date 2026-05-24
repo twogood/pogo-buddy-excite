@@ -142,6 +142,14 @@ body {
 .progress-fraction.close    { color: var(--close); }
 .progress-fraction.ready    { color: var(--ready); }
 
+.progress-fraction.mood-tired,
+.progress-fraction.mood-dull    { color: var(--calm); }
+.progress-fraction.mood-normal  { color: var(--warming); }
+.progress-fraction.mood-happy,
+.progress-fraction.mood-smile   { color: var(--building); }
+.progress-fraction.mood-fun     { color: var(--close); }
+.progress-fraction.mood-excited { color: var(--ready); }
+
 .progress-label {
   font-size: 14px;
   font-weight: 600;
@@ -168,11 +176,34 @@ body {
 .progress-bar-fill.close    { background: var(--close); }
 .progress-bar-fill.ready    { background: var(--ready); }
 
+.progress-bar-fill.mood-tired,
+.progress-bar-fill.mood-dull    { background: var(--calm); }
+.progress-bar-fill.mood-normal  { background: var(--warming); }
+.progress-bar-fill.mood-happy,
+.progress-bar-fill.mood-smile   { background: var(--building); }
+.progress-bar-fill.mood-fun     { background: var(--close); }
+.progress-bar-fill.mood-excited { background: var(--ready); }
+
 .progress-estimate-note {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 4px;
 }
+
+.mood-sprite {
+  width: 80px;
+  height: 90px;
+  background-image: url('./buddy-moods.webp');
+  background-size: 500% auto;
+  background-repeat: no-repeat;
+  margin: 8px auto;
+}
+.mood-sprite.hidden   { display: none; }
+.mood-sprite.sprite-0 { background-position: 0%   0%; }
+.mood-sprite.sprite-1 { background-position: 25%  0%; }
+.mood-sprite.sprite-2 { background-position: 50%  0%; }
+.mood-sprite.sprite-3 { background-position: 75%  0%; }
+.mood-sprite.sprite-4 { background-position: 100% 0%; }
 
 /* ── Recommendation ── */
 .recommendation {

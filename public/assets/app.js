@@ -22,12 +22,15 @@ const RULES = {
 
 const STORAGE_KEY = 'buddy-excite';
 
+// sprite index 0–4 = left-to-right in buddy-moods.webp; null = no sprite
 const EP_LEVELS = [
-  { min: 32, label: 'Ready for excited confirmation', cls: 'ready'    },
-  { min: 24, label: 'Very close',                     cls: 'close'    },
-  { min: 16, label: 'Building excitement',            cls: 'building' },
-  { min: 8,  label: 'Warming up',                     cls: 'warming'  },
-  { min: 0,  label: 'Calm',                           cls: 'calm'     },
+  { min: 32, label: 'Excited', cls: 'mood-excited', sprite: 4 },
+  { min: 16, label: 'Fun',     cls: 'mood-fun',     sprite: 3 },
+  { min: 8,  label: 'Smile',   cls: 'mood-smile',   sprite: 2 },
+  { min: 4,  label: 'Happy',   cls: 'mood-happy',   sprite: 1 },
+  { min: 2,  label: 'Normal',  cls: 'mood-normal',  sprite: 0 },
+  { min: 1,  label: 'Dull',    cls: 'mood-dull',    sprite: null },
+  { min: 0,  label: 'Tired',   cls: 'mood-tired',   sprite: null },
 ];
 
 const MAINTAIN_RISK_MINUTES = 25;
@@ -319,6 +322,14 @@ function render() {
   const fill = el('progress-bar-fill');
   fill.style.width = pct + '%';
   fill.className = 'progress-bar-fill ' + level.cls;
+
+  // Mood sprite
+  const sprite = el('mood-sprite');
+  if (level.sprite !== null && level.sprite !== undefined) {
+    sprite.className = `mood-sprite sprite-${level.sprite}`;
+  } else {
+    sprite.className = 'mood-sprite hidden';
+  }
 
   // Recommendation
   el('recommendation').innerHTML = getRecommendation(calc);
