@@ -1,10 +1,11 @@
-const CACHE_NAME = 'buddy-excite-v1';
+const CACHE_NAME = 'buddy-excite-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/assets/app.js',
   '/assets/styles.css',
   '/assets/icons/icon.svg',
+  '/assets/icons/buddy-moods.webp',
   '/manifest.webmanifest',
 ];
 
