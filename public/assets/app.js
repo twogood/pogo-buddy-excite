@@ -388,23 +388,51 @@ function render() {
 function renderHistory() {
   const list = el('history-list');
   const empty = el('history-empty');
-  const sorted = [...state.interactions].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
 
-  if (sorted.length === 0) {
+  if (state.interactions.length === 0) {
     list.innerHTML = '';
     empty.style.display = '';
     return;
   }
   empty.style.display = 'none';
 
-  list.innerHTML = sorted.map((i) => {
+  // Sort oldest-first to compute gaps, then reverse for display
+  const sorted = [...state.interactions].sort(
+    (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+  );
+
+  const now = Date.now();
+  const displayItems = [];
+
+  for (let idx = 0; idx < sorted.length; idx++) {
+    displayItems.push({ kind: 'interaction', i: sorted[idx] });
+
+    const currentMs = new Date(sorted[idx].createdAt).getTime();
+    const nextMs = idx + 1 < sorted.length
+      ? new Date(sorted[idx + 1].createdAt).getTime()
+      : now;
+
+    const gapMin = Math.floor((nextMs - currentMs) / 60000);
+    const decayAmount = Math.floor(gapMin / RULES.decayEveryMinutes) * RULES.decayAmount;
+    if (decayAmount > 0) {
+      displayItems.push({ kind: 'decay', amount: decayAmount, gapMin });
+    }
+  }
+
+  displayItems.reverse();
+
+  list.innerHTML = displayItems.map((item) => {
+    if (item.kind === 'decay') {
+      return `<li class="history-item history-decay">
+        <span class="history-time"></span>
+        <span class="history-type">Decay (${item.gapMin} min inactive)</span>
+        <span class="history-ep negative">−${item.amount} EP</span>
+      </li>`;
+    }
+    const { i } = item;
     const cfg = INTERACTION_TYPES[i.type];
     const label = cfg ? cfg.label : i.type;
-    const epText = i.counted
-      ? `+${i.pointsAwarded} EP`
-      : 'cooldown active';
+    const epText = i.counted ? `+${i.pointsAwarded} EP` : 'cooldown active';
     const epCls = i.counted ? 'history-ep' : 'history-ep cooldown';
     return `<li class="history-item">
       <span class="history-time">${formatTime(i.createdAt)}</span>

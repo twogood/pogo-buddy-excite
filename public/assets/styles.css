@@ -446,6 +446,16 @@ body {
   font-weight: 400;
 }
 
+.history-item.history-decay {
+  opacity: 0.65;
+  font-style: italic;
+}
+
+.history-ep.negative {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .history-empty {
   font-size: 14px;
   color: var(--text-muted);
