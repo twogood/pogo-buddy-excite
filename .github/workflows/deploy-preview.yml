@@ -50,6 +50,12 @@ jobs:
           echo "host=$SZ_HOST" >> $GITHUB_OUTPUT
           echo "::add-mask::$SZ_PASSWORD"
 
+      - name: Patch index.html for cache busting
+        run: |
+          TIMESTAMP=$(date +%s)
+          sed -i "s|/assets/app\.js\"|/assets/app.js?t=$TIMESTAMP\"|g" public/index.html
+          sed -i "s|/assets/styles\.css\"|/assets/styles.css?t=$TIMESTAMP\"|g" public/index.html
+
       - name: Upload files
         env:
           SZ_PASSWORD: ${{ steps.storage.outputs.password }}
