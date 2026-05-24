@@ -1,0 +1,100 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      BUNNYNET_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bunny CLI
+        run: |
+          npm install --global @bunny.net/cli@0.5.1
+          bunny --version
+
+      - name: Verify Bunny auth
+        run: bunny whoami --output json > /dev/null
+
+      - name: Find or create storage zone
+        id: storage
+        run: |
+          ZONE_NAME="pogo-buddy-excite"
+
+          ALL_ZONES=$(bunny api GET '/storagezone?page=1&perPage=1000' --output json)
+          EXISTING=$(echo "$ALL_ZONES" | jq -c '(.Items // [])[] | select(.Name == "pogo-buddy-excite")' | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            SZ_ID=$(echo "$EXISTING" | jq -r '.Id')
+            SZ_PASSWORD=$(echo "$EXISTING" | jq -r '.Password')
+            SZ_HOST=$(echo "$EXISTING" | jq -r '.StorageHostname')
+          else
+            RESPONSE=$(bunny api POST /storagezone \
+              --body '{"Name":"pogo-buddy-excite","Region":"SE"}' \
+              --output json)
+            SZ_ID=$(echo "$RESPONSE" | jq -r '.Id')
+            SZ_PASSWORD=$(echo "$RESPONSE" | jq -r '.Password')
+            SZ_HOST=$(echo "$RESPONSE" | jq -r '.StorageHostname')
+            sleep 5
+          fi
+
+          echo "id=$SZ_ID" >> $GITHUB_OUTPUT
+          echo "password=$SZ_PASSWORD" >> $GITHUB_OUTPUT
+          echo "host=$SZ_HOST" >> $GITHUB_OUTPUT
+          echo "::add-mask::$SZ_PASSWORD"
+
+      - name: Upload files
+        env:
+          SZ_PASSWORD: ${{ steps.storage.outputs.password }}
+          SZ_HOST: ${{ steps.storage.outputs.host }}
+        run: |
+          find public -type f | while read -r file; do
+            remote="${file#public/}"
+            echo "Uploading $file -> /pogo-buddy-excite/$remote"
+            curl --fail --silent --show-error \
+              --request PUT \
+              --header "AccessKey: $SZ_PASSWORD" \
+              --data-binary "@$file" \
+              "https://$SZ_HOST/pogo-buddy-excite/$remote"
+          done
+
+      - name: Find or create pull zone
+        id: pullzone
+        env:
+          SZ_ID: ${{ steps.storage.outputs.id }}
+        run: |
+          ALL_PZ=$(bunny api GET '/pullzone?page=1&perPage=1000' --output json)
+          EXISTING_ID=$(echo "$ALL_PZ" | jq -r '(.Items // [])[] | select(.Name == "pogo-buddy-excite") | .Id' | head -1)
+
+          if [ -z "$EXISTING_ID" ] || [ "$EXISTING_ID" = "null" ]; then
+            RESPONSE=$(bunny api POST /pullzone \
+              --body "{\"Name\":\"pogo-buddy-excite\",\"Type\":0,\"StorageZoneId\":$SZ_ID}" \
+              --output json)
+            EXISTING_ID=$(echo "$RESPONSE" | jq -r '.Id')
+          fi
+
+          echo "id=$EXISTING_ID" >> $GITHUB_OUTPUT
+
+      - name: Add custom hostname to pull zone
+        run: |
+          PZ_ID="${{ steps.pullzone.outputs.id }}"
+          HOSTNAME="excite.2good.nu"
+
+          PZ_DATA=$(bunny api GET /pullzone/$PZ_ID --output json)
+          EXISTING=$(echo "$PZ_DATA" | jq -r '.Hostnames[]?.Value // empty' | grep -Fx "$HOSTNAME" || true)
+
+          if [ -z "$EXISTING" ]; then
+            bunny api POST /pullzone/$PZ_ID/addHostname \
+              --body "{\"Hostname\":\"$HOSTNAME\"}" \
+              --output json > /dev/null
+            echo "Added hostname $HOSTNAME"
+          else
+            echo "Hostname $HOSTNAME already configured"
+          fi
+
+      - name: Purge pull zone cache
+        run: bunny api POST /pullzone/${{ steps.pullzone.outputs.id }}/purgeCache
