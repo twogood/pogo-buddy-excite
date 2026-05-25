@@ -21,6 +21,7 @@ const RULES = {
 };
 
 const STORAGE_KEY = 'buddy-excite';
+const EXCITED_CONFIRMATION_TYPE = 'excited-confirmation';
 
 // sprite index 0–4 = left-to-right in buddy-moods.webp; null = no sprite
 const EP_LEVELS = [
@@ -79,6 +80,17 @@ function recalculate(now) {
   let lastActivityAt = null; // any interaction resets decay, even cooldown-blocked ones
 
   for (const interaction of sorted) {
+    if (interaction.type === EXCITED_CONFIRMATION_TYPE) {
+      const createdMs = new Date(interaction.createdAt).getTime();
+      const bonus = Number(interaction.pointsAwarded) || 0;
+      interaction.counted = bonus > 0;
+      interaction.pointsAwarded = bonus;
+      totalEP += bonus;
+      lastActivityAt = createdMs;
+      lastEPAt = createdMs;
+      continue;
+    }
+
     const cfg = INTERACTION_TYPES[interaction.type];
     if (!cfg) continue;
 
@@ -268,6 +280,18 @@ function startNewSession() {
 }
 
 function confirmExcited() {
+  const now = Date.now();
+  const calc = recalculate(now);
+  if (calc.ep < RULES.excitedThreshold) {
+    state.interactions.push({
+      id: crypto.randomUUID(),
+      type: EXCITED_CONFIRMATION_TYPE,
+      createdAt: new Date(now).toISOString(),
+      pointsAwarded: RULES.excitedThreshold - calc.ep,
+      counted: true,
+      note: '',
+    });
+  }
   state.mode = 'maintaining';
   state.excitedStartedAt = new Date().toISOString();
   saveState();
@@ -431,7 +455,9 @@ function renderHistory() {
     }
     const { i } = item;
     const cfg = INTERACTION_TYPES[i.type];
-    const label = cfg ? cfg.label : i.type;
+    const label = i.type === EXCITED_CONFIRMATION_TYPE
+      ? 'Buddy confirmed excited'
+      : (cfg ? cfg.label : i.type);
     const epText = i.counted ? `+${i.pointsAwarded} EP` : 'cooldown active';
     const epCls = i.counted ? 'history-ep' : 'history-ep cooldown';
     return `<li class="history-item">
