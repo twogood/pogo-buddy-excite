@@ -203,6 +203,7 @@ function logInteraction(type) {
 
   if (cfg.cooldownMin === 0) {
     recentPresses[type] = now;
+    // Add a small buffer to ensure the lockout has fully elapsed before re-rendering
     setTimeout(recalculateAndRender, ZERO_COOLDOWN_LOCKOUT_MS + 50);
   }
 
