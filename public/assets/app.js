@@ -22,6 +22,7 @@ const RULES = {
 
 const STORAGE_KEY = 'buddy-excite';
 const EXCITED_CONFIRMATION_TYPE = 'excited-confirmation';
+const ZERO_COOLDOWN_LOCKOUT_MS = 5000;
 
 // sprite index 0–4 = left-to-right in buddy-moods.webp; null = no sprite
 const EP_LEVELS = [
@@ -40,6 +41,7 @@ const MAINTAIN_RISK_MINUTES = 25;
 
 let state = defaultState();
 let pendingNotifications = [];
+let recentPresses = {};
 
 function defaultState() {
   return {
@@ -198,6 +200,11 @@ function logInteraction(type) {
   const cd = calc.cooldowns[type];
   const onCooldown = cd.msRemaining > 0;
   const cfg = INTERACTION_TYPES[type];
+
+  if (cfg.cooldownMin === 0) {
+    recentPresses[type] = now;
+    setTimeout(recalculateAndRender, ZERO_COOLDOWN_LOCKOUT_MS + 50);
+  }
 
   const interaction = {
     id: crypto.randomUUID(),
@@ -366,10 +373,13 @@ function render() {
     const btn = el('btn-' + type);
     if (!btn) continue;
     const cd = calc.cooldowns[type];
-    const ready = cd.msRemaining === 0;
+    const lastPress = recentPresses[type];
+    const lockedOut = cfg.cooldownMin === 0 && lastPress !== undefined && (now - lastPress) < ZERO_COOLDOWN_LOCKOUT_MS;
+    const ready = cd.msRemaining === 0 && !lockedOut;
+    btn.disabled = lockedOut;
     btn.className = 'interaction-btn' + (ready ? ' ready' : '');
     const cooldownEl = btn.querySelector('.btn-cooldown');
-    cooldownEl.textContent = ready ? 'Ready now' : `Ready in ${formatMinutes(cd.msRemaining)}`;
+    cooldownEl.textContent = lockedOut ? 'Please wait…' : (ready ? 'Ready now' : `Ready in ${formatMinutes(cd.msRemaining)}`);
   }
 
   // Excited controls
