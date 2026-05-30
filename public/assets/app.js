@@ -62,6 +62,8 @@ function loadState() {
     state = defaultState();
   }
   if (!state.sessionStartedAt) state.sessionStartedAt = new Date().toISOString();
+  if (!Array.isArray(state.interactions)) state.interactions = [];
+  if (!state.settings) state.settings = { notificationsEnabled: false };
 }
 
 function saveState() {
@@ -231,31 +233,46 @@ function clearPendingNotifications() {
 
 function scheduleNotifications() {
   clearPendingNotifications();
-  if (!state.settings.notificationsEnabled) return;
-  if (Notification.permission !== 'granted') return;
+
+  const permissionOk = 'Notification' in window && Notification.permission === 'granted';
+  console.log('[notif] scheduleNotifications — enabled:', state.settings.notificationsEnabled, '| permission:', ('Notification' in window ? Notification.permission : 'no API'));
+
+  if (!state.settings.notificationsEnabled) { console.log('[notif] skipped: notifications disabled in settings'); return; }
+  if (!permissionOk) { console.log('[notif] skipped: permission not granted'); return; }
 
   const now = Date.now();
   const calc = recalculate(now);
 
-  const readyTypes = Object.entries(calc.cooldowns)
+  const cooldownEntries = Object.entries(calc.cooldowns);
+  console.log('[notif] cooldowns:', cooldownEntries.map(([t, cd]) => `${t}=${Math.round(cd.msRemaining / 1000)}s`).join(', '));
+
+  const readyTypes = cooldownEntries
     .filter(([, cd]) => cd.msRemaining > 0)
     .sort(([, a], [, b]) => a.msRemaining - b.msRemaining);
 
-  if (readyTypes.length === 0) return;
+  if (readyTypes.length === 0) { console.log('[notif] skipped: nothing on cooldown, nothing to schedule'); return; }
 
   // Schedule one notification at the time when the first interaction becomes ready
-  const [, firstCd] = readyTypes[0];
+  const [firstType, firstCd] = readyTypes[0];
   const delay = firstCd.msRemaining;
+  console.log(`[notif] scheduling notification in ${Math.round(delay / 1000)}s for type: ${firstType}`);
 
   const id = setTimeout(() => {
+    console.log('[notif] setTimeout fired, checking ready types');
     const names = Object.entries(recalculate(Date.now()).cooldowns)
       .filter(([, cd]) => cd.msRemaining === 0)
       .map(([type]) => INTERACTION_TYPES[type].label);
-    if (names.length === 0) return;
-    new Notification('Buddy interaction ready', {
-      body: `${names.join(', ')} should now be useful.`,
-      icon: '/assets/icons/icon.svg',
-    });
+    console.log('[notif] ready types at fire time:', names);
+    if (names.length === 0) { console.log('[notif] no ready types, skipping notification'); return; }
+    try {
+      const n = new Notification('Buddy interaction ready', {
+        body: `${names.join(', ')} should now be useful.`,
+        icon: '/assets/icons/icon.svg',
+      });
+      console.log('[notif] Notification created:', n);
+    } catch (e) {
+      console.error('[notif] Notification() threw:', e);
+    }
     scheduleNotifications();
   }, delay);
 
@@ -264,14 +281,49 @@ function scheduleNotifications() {
 
 async function enableNotifications() {
   if (!('Notification' in window)) {
+    console.log('[notif] Notification API not available');
     updateNotificationsUI('not-supported');
     return;
   }
+  console.log('[notif] requesting permission, current:', Notification.permission);
   const permission = await Notification.requestPermission();
+  console.log('[notif] permission result:', permission);
   state.settings.notificationsEnabled = permission === 'granted';
   saveState();
   scheduleNotifications();
   updateNotificationsUI(permission);
+}
+
+async function sendTestNotification() {
+  const statusEl = el('test-notification-status');
+  console.log('[notif] test: permission=', Notification.permission, 'enabled=', state.settings.notificationsEnabled);
+
+  if (!('Notification' in window)) {
+    statusEl.textContent = 'Notification API not supported.';
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    statusEl.textContent = `Permission is "${Notification.permission}", not granted.`;
+    console.log('[notif] test: cannot send, permission not granted');
+    return;
+  }
+
+  statusEl.textContent = 'Sending in 5s…';
+  console.log('[notif] test: scheduling test notification in 5s');
+  setTimeout(() => {
+    console.log('[notif] test: firing test notification now');
+    try {
+      const n = new Notification('Test notification', {
+        body: 'If you see this, notifications are working!',
+        icon: '/assets/icons/icon.svg',
+      });
+      console.log('[notif] test: created:', n);
+      statusEl.textContent = 'Sent!';
+    } catch (e) {
+      console.error('[notif] test: Notification() threw:', e);
+      statusEl.textContent = `Error: ${e.message}`;
+    }
+  }, 5000);
 }
 
 // ── Session management ─────────────────────────────────────────────────────
@@ -482,11 +534,13 @@ function renderHistory() {
 function updateNotificationsUI(permissionOrStatus) {
   const btn = el('btn-notifications');
   const statusEl = el('notifications-status');
+  const testRow = el('test-notification-row');
 
   if (!('Notification' in window) || permissionOrStatus === 'not-supported') {
     btn.textContent = 'Reminders unavailable';
     btn.disabled = true;
     statusEl.textContent = 'Your browser does not support notifications.';
+    testRow.style.display = 'none';
     return;
   }
 
@@ -494,14 +548,17 @@ function updateNotificationsUI(permissionOrStatus) {
   if (granted) {
     btn.textContent = 'Disable reminders';
     statusEl.textContent = 'Reminders enabled.';
+    testRow.style.display = '';
   } else if (Notification.permission === 'denied') {
     btn.textContent = 'Reminders blocked';
     btn.disabled = true;
     statusEl.textContent = 'Notifications are blocked. Enable them in browser settings.';
+    testRow.style.display = 'none';
   } else {
     btn.textContent = 'Enable reminders';
     btn.disabled = false;
     statusEl.textContent = '';
+    testRow.style.display = 'none';
   }
 }
 
@@ -531,6 +588,7 @@ function attachEvents() {
       enableNotifications();
     }
   });
+  el('btn-test-notification').addEventListener('click', sendTestNotification);
 }
 
 function init() {
